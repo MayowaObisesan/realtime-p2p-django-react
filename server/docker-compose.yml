@@ -1,0 +1,53 @@
+version: '3'
+
+services:
+  web: &api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rt-p2p-django
+    image: mayowa/rt-p2p-python-api
+    command: bash -c "pip install -r requirements.txt && python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    networks:
+      - def_network
+    environment:
+      - DJANGO_ENV=${DJANGO_ENV}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+    depends_on:
+      - postgres-db
+    restart: unless-stopped
+
+  postgres-db:
+    image: postgres:15
+    container_name: postgresdb
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+    ports:
+      - '5332:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d postgres" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - def_network
+
+networks:
+  def_network:
+    driver: bridge
+
+volumes:
+  pg_data:
